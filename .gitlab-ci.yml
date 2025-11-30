@@ -1,0 +1,11 @@
+stages:
+  - build
+  - push
+  - deploy
+    ##yml files
+include:
+  - local: .gitlab-ci_develop_cg.yml
+  - local: .gitlab-ci_testing.yml
+  #- local: .gitlab-ci_staging.yml
+  #- local: .gitlab-ci_k8develop-cg.yml
+  #- local: .gitlab-ci_zamy.yml

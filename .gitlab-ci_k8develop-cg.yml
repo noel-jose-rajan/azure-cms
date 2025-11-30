@@ -1,0 +1,48 @@
+stages:
+  - build
+  - push
+  - deploy
+
+variables:
+  IMAGE_NAME: "git.sdtgroup.tech:5050/kmun_team/cms-cg-react-web"
+  IMAGE_TAG: "1.002"
+  KUBE_CONFIG: "/home/ubuntu/.kube/config"
+#kubernetes config
+before_script:
+  - export KUBECONFIG=$KUBE_CONFIG
+
+k8develop_cg_build:
+  stage: build
+  tags:
+    - onpermk8
+  script:
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG .
+    - docker login git.sdtgroup.tech:5050 -u $CI_REGISTRY_USER -p $CI_REGISTRY_PWD
+    - docker push $IMAGE_NAME:$IMAGE_TAG
+  only:
+    - develop-cg
+
+k8develop_cg_push:
+  stage: push
+  tags:
+    - onpermk8
+  script:
+    - echo "Skipping push stage. No push operation needed."
+  only:
+    - develop-cg
+
+      #deploy to onperm cluster k8
+k8develop_cg_deploy:
+  stage: deploy
+  tags:
+    - onpermk8
+  before_script:
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY_K8" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H $SSH_HOST_K8 >> ~/.ssh/known_hosts
+  script:
+    - ssh $SSH_USER_K8@$SSH_HOST_K8 "kubectl apply -f /home/ubuntu/react-web/react-web-deployment.yaml"
+    - ssh $SSH_USER_K8@$SSH_HOST_K8 "kubectl rollout restart deployment reactnative-web"
+  only:
+    - develop-cg

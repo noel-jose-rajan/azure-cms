@@ -1,0 +1,57 @@
+image: docker:latest
+
+services:
+  - docker:dind
+
+variables:
+  DOCKER_DRIVER: overlay2
+  SSH_PRIVATE_KEY: $SSH_PRIVATE_KEY_S
+  SSH_USER: $SSH_USER_S
+  SSH_HOST: $SSH_HOST_S
+
+stages:
+  - build
+  - push
+  - deploy
+
+# Build the Docker images
+build_testing:
+  stage: build
+  tags:
+    -  staging
+  script:
+    # Build the Docker image
+    - docker build -t  cms-cg-react-web-testing:latest .
+  only:
+    - testing
+
+push_testing:
+  stage: push
+  tags:
+    - staging
+  script:
+    - echo "Skipping push stage. No push operation needed."
+  only:
+    - testing
+
+# Deploy the app via SSH
+deploy_testing:
+  stage: deploy
+
+  tags:
+    -  staging
+  before_script:
+    # Set up SSH keys for the deployment
+    - mkdir -p ~/.ssh
+      ## - echo "$SSH_PRIVATE_KEY_S" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan $SSH_HOST_S >> ~/.ssh/known_hosts
+  script:
+    ## Save and load the Docker image on the remote server
+    - docker save  cms-cg-react-web-testing:latest | bzip2 | ssh $SSH_USER_S@$SSH_HOST_S "bunzip2 | docker load"
+    # Stop and remove the old container
+    - ssh $SSH_USER_S@$SSH_HOST_S "docker stop cms-cg-react-web-testing || true && docker rm cms-cg-react-web-testing || true"
+    # Run the new container
+    - ssh $SSH_USER_S@$SSH_HOST_S "docker run -d --name cms-cg-react-web-testing -p 8076:80 cms-cg-react-web-testing:latest"
+  only:
+    - testing
