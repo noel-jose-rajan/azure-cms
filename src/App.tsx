@@ -11,9 +11,10 @@ import { router } from "./navigation/routes";
 import { AllowedViewsProvider } from "./context/allowed-views";
 import { Suspense } from "react";
 import RouteFallback from "./navigation/routes/route-fallback";
+import ENV from "./constants/env";
 
 function App() {
-  console.log("New ENV's: ",import.meta.env);
+  console.log("New ENV's: ",ENV);
   
   const { theme } = useTheme();
   const { language } = useLanguage();

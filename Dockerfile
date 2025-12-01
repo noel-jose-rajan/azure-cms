@@ -1,32 +1,32 @@
-# Use an official Node.js runtime as the base image
-FROM node:20-alpine AS build
-
-# Set the working directory
+# ===============================
+# 1. Build stage
+# ===============================
+FROM node:18 AS build
 WORKDIR /app
 
-# Copy package.json and package-lock.json (or yarn.lock) to the working directory
-COPY package.json yarn.lock ./
+COPY package*.json ./
+RUN npm install
 
-# Install dependencies
-RUN yarn install --frozen-lockfile
-
-# Copy the rest of the application code
 COPY . .
+RUN npm run build
 
-# Build the Vite app
-RUN yarn build
 
-# Use an Nginx image to serve the production build
-FROM nginx:1.23-alpine
+# ===============================
+# 2. Runtime stage (Nginx)
+# ===============================
+FROM nginx:alpine
 
-# Copy the built files to the nginx HTML directory
+# Copy built app
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy a custom nginx configuration file (optional)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx SPA configuration
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose the port Nginx will run on
+# Copy entrypoint script
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 80
 
-# Start Nginx
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
